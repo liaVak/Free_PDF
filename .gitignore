@@ -1,0 +1,13 @@
+.gradle/
+.kotlin/
+.idea/
+.tools/
+.secrets/
+**/build/
+local.properties
+*.jks
+*.keystore
+keystore.properties
+output/
+*.hprof
+__pycache__/

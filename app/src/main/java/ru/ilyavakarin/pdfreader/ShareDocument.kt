@@ -6,6 +6,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
@@ -25,7 +27,15 @@ object ShareDocument {
         val file=File(directory,safeName)
         try {
             context.contentResolver.openInputStream(source)?.use { input ->
-                file.outputStream().use { input.copyTo(it) }
+                file.outputStream().use { output ->
+                    val buffer=ByteArray(64*1024)
+                    while(true) {
+                        currentCoroutineContext().ensureActive()
+                        val read=input.read(buffer)
+                        if(read<0)break
+                        output.write(buffer,0,read)
+                    }
+                }
             } ?: error("Не удалось прочитать PDF")
             val uri=FileProvider.getUriForFile(context,"${context.packageName}.files",file)
             sendIntent(context,uri)

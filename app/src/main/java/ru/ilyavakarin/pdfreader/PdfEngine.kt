@@ -12,6 +12,7 @@ import android.system.Os
 import android.system.OsConstants
 import android.util.LruCache
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -78,13 +79,26 @@ class AndroidPdfEngine private constructor(
         }
     }
     companion object {
-        suspend fun open(context: Context, uri: Uri): AndroidPdfEngine = withContext(Dispatchers.IO) {
+        suspend fun open(context: Context, uri: Uri): AndroidPdfEngine {
+            var result: AndroidPdfEngine? = null
+            try {
+                withContext(Dispatchers.IO) {
+                    result = openBlocking(context, uri)
+                }
+                return checkNotNull(result)
+            } catch (e: Exception) {
+                // withContext may cancel while dispatching a newly opened renderer back to the caller.
+                withContext(NonCancellable) { result?.close() }
+                throw e
+            }
+        }
+        private fun openBlocking(context: Context, uri: Uri): AndroidPdfEngine {
             var descriptor: ParcelFileDescriptor? = null
             var temporary: File? = null
             try {
                 descriptor = context.contentResolver.openFileDescriptor(uri, "r")
                     ?: error("Не удалось открыть документ")
-                val seekable = runCatching { Os.lseek(descriptor.fileDescriptor, 0, OsConstants.SEEK_SET) }.isSuccess
+                val seekable = runCatching { Os.lseek(checkNotNull(descriptor).fileDescriptor, 0, OsConstants.SEEK_SET) }.isSuccess
                 if (!seekable) {
                     descriptor.close()
                     descriptor = null
@@ -100,7 +114,7 @@ class AndroidPdfEngine private constructor(
                     renderer.close()
                     error("В документе нет страниц")
                 }
-                AndroidPdfEngine(renderer, temporary)
+                return AndroidPdfEngine(renderer, temporary)
             } catch (e: Exception) {
                 descriptor?.close()
                 temporary?.delete()

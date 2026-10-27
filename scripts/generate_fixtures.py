@@ -46,14 +46,24 @@ for family,text,y in [('Noto Sans CJK SC','OpenType CFF: Regular 012345 fi fl',1
  bind(pa,'pango_font_description_free',None,[ptr])(desc)
 bind(go,'g_object_unref',None,[ptr])(layout);bind(cairo,'cairo_destroy',None,[ptr])(cr);bind(cairo,'cairo_surface_destroy',None,[ptr])(surf)
 c=canvas.Canvas(str(OUT/'fallback.pdf'),pagesize=(600,800),invariant=1);c.setFont('Helvetica',24);c.drawString(45,650,'Non-embedded Helvetica 012345 ABC xyz');c.save()
-# Same Cyrillic encoding/widths as embedded specimen, but deliberately omit the font program.
-r=PdfReader(str(OUT/'embedded.pdf'));w=PdfWriter();w.add_page(r.pages[0])
-for f in w.pages[0]['/Resources']['/Font'].values():
- obj=f.get_object();d=obj.get('/FontDescriptor')
- if d:
-  d=d.get_object()
-  for key in ['/FontFile','/FontFile2','/FontFile3']:
-   if key in d:del d[key]
+# A valid non-embedded Cyrillic font with explicit glyph-name encoding.
+from reportlab.pdfbase._glyphlist import _glyphname2unicode
+names={value:key for key,value in _glyphname2unicode.items() if key.startswith('afii')}
+names.update({value:key for key,value in _glyphname2unicode.items() if value not in names})
+w=PdfWriter();p=w.add_blank_page(width=600,height=800)
+text='Arial: Кириллица Ёжик 012345'
+codes=text.encode('cp1251')
+differences=A()
+for code in sorted(set(codes)):
+    differences.extend([I(code),N('/'+names[ord(bytes([code]).decode('cp1251'))])])
+desc=D({N('/Type'):N('/FontDescriptor'),N('/FontName'):N('/ArialMT'),N('/Flags'):I(32),N('/FontBBox'):A([I(-1000),I(-300),I(2000),I(1100)]),N('/ItalicAngle'):I(0),N('/Ascent'):I(900),N('/Descent'):I(-220),N('/CapHeight'):I(720),N('/StemV'):I(80)})
+f=D({N('/Type'):N('/Font'),N('/Subtype'):N('/TrueType'),N('/BaseFont'):N('/ArialMT'),N('/FirstChar'):I(0),N('/LastChar'):I(255),N('/Widths'):A([I(round(pdfmetrics.stringWidth(bytes([i]).decode('cp1251',errors='replace'),'Regular',1000))) for i in range(256)]),N('/FontDescriptor'):w._add_object(desc),N('/Encoding'):D({N('/Type'):N('/Encoding'),N('/BaseEncoding'):N('/WinAnsiEncoding'),N('/Differences'):differences})})
+cmap=S()
+pairs='\n'.join(f'<{code:02X}> <{ord(bytes([code]).decode("cp1251")):04X}>' for code in sorted(set(codes)))
+cmap.set_data(('/CIDInit /ProcSet findresource begin 12 dict begin begincmap /CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def /CMapName /CustomUCS def /CMapType 2 def 1 begincodespacerange <00> <FF> endcodespacerange '+str(len(set(codes)))+' beginbfchar\n'+pairs+'\nendbfchar endcmap CMapName currentdict /CMap defineresource pop end end').encode())
+f[N('/ToUnicode')]=w._add_object(cmap)
+p[N('/Resources')]=D({N('/Font'):D({N('/F1'):w._add_object(f)})})
+stream=S();stream.set_data(b'BT /F1 18 Tf 40 650 Td <'+codes.hex().encode()+b'> Tj ET');p[N('/Contents')]=w._add_object(stream)
 w.write(str(OUT/'fallback-cyrillic.pdf'))
 c=canvas.Canvas(str(OUT/'mixed.pdf'),invariant=1)
 for size in [(600,800),(800,500),(400,1000)]:

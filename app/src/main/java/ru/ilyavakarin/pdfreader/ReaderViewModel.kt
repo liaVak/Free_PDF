@@ -71,11 +71,16 @@ class ReaderViewModel(application: Application,private val saved:SavedStateHandl
                         if(it.moveToFirst()) it.getString(0) else null
                     } ?: "Документ.pdf"
                 }
-                val previous=history.documents.first().firstOrNull { it.uri==uri.toString() }
+                val before=history.documents.first()
+                val previous=before.firstOrNull { it.uri==uri.toString() }
                 candidate=AndroidPdfEngine.open(app,uri)
                 val (page,fraction)=ReadingRules.position(previous?.page?:0,previous?.fraction?:0f,candidate.pageCount)
                 val size=candidate.pageSize(page)
                 history.opened(RecentDocument(uri.toString(),name,System.currentTimeMillis(),page,fraction))
+                val retained=history.documents.first().map {it.uri}.toSet()
+                before.filterNot { it.uri in retained }.forEach { evicted ->
+                    runCatching { app.contentResolver.releasePersistableUriPermission(Uri.parse(evicted.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                }
                 currentPage=page;currentFraction=fraction
                 _state.value=ReaderState(document=OpenDocument(uri,name,candidate,page,fraction,size))
                 candidate=null

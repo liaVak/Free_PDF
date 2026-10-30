@@ -21,9 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +33,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -92,7 +90,7 @@ private fun LibraryScreen(documents:List<RecentDocument>,open:()->Unit,read:(Rec
         Spacer(Modifier.height(28.dp))
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.primaryContainer) {
-                Icon(Icons.Default.PictureAsPdf,null,Modifier.padding(14.dp).size(28.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
+                Icon(painterResource(R.drawable.ic_pdf),null,Modifier.padding(14.dp).size(28.dp),tint=MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Column {
                 Text("PDF Reader",style=MaterialTheme.typography.headlineMedium)
@@ -101,7 +99,7 @@ private fun LibraryScreen(documents:List<RecentDocument>,open:()->Unit,read:(Rec
         }
         Spacer(Modifier.height(28.dp))
         Button(onClick=open,modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(16.dp)) {
-            Icon(Icons.Default.FolderOpen,null)
+            Icon(painterResource(R.drawable.ic_folder_open),null)
             Spacer(Modifier.width(10.dp))
             Text("Открыть PDF",style=MaterialTheme.typography.titleMedium)
         }
@@ -113,7 +111,7 @@ private fun LibraryScreen(documents:List<RecentDocument>,open:()->Unit,read:(Rec
         Spacer(Modifier.height(14.dp))
         if(documents.isEmpty()) {
             Column(Modifier.weight(1f).fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
-                Icon(Icons.Default.Description,null,Modifier.size(64.dp),tint=MaterialTheme.colorScheme.outline)
+                Icon(painterResource(R.drawable.ic_document),null,Modifier.size(64.dp),tint=MaterialTheme.colorScheme.outline)
                 Spacer(Modifier.height(18.dp))
                 Text("Начните с документа",style=MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
@@ -124,7 +122,7 @@ private fun LibraryScreen(documents:List<RecentDocument>,open:()->Unit,read:(Rec
             items(documents,key={it.uri}) {doc ->
                 Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surfaceContainerLow,modifier=Modifier.fillMaxWidth()) {
                     Row(Modifier.clickable {read(doc)}.padding(start=16.dp,top=14.dp,bottom=14.dp,end=4.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Icon(Icons.Default.Description,null,tint=MaterialTheme.colorScheme.primary)
+                        Icon(painterResource(R.drawable.ic_document),null,tint=MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(doc.name,maxLines=2,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleSmall)
@@ -132,7 +130,7 @@ private fun LibraryScreen(documents:List<RecentDocument>,open:()->Unit,read:(Rec
                             val date=remember(doc.openedAt) {DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT).format(Date(doc.openedAt))}
                             Text("Стр. ${doc.page+1} · $date",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        IconButton(onClick={remove(doc.uri)}) {Icon(Icons.Default.Close,"Убрать ${doc.name} из истории")}
+                        IconButton(onClick={remove(doc.uri)}) {Icon(painterResource(R.drawable.ic_close),"Убрать ${doc.name} из истории")}
                     }
                 }
             }
@@ -174,12 +172,12 @@ private fun ReaderScreen(
     val latestZoom by rememberUpdatedState(zoom)
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title={Text(document.name,maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.titleMedium)},
-            navigationIcon={IconButton(onClick=back){Icon(Icons.AutoMirrored.Filled.ArrowBack,"К документам")}},
+            navigationIcon={IconButton(onClick=back){Icon(painterResource(R.drawable.ic_arrow_back),"К документам")}},
             actions={
-                IconButton(onClick=open) {Icon(Icons.Default.FolderOpen,"Открыть другой PDF")}
+                IconButton(onClick=open) {Icon(painterResource(R.drawable.ic_folder_open),"Открыть другой PDF")}
                 IconButton(onClick=share,enabled=!sharing) {
                     if(sharing) CircularProgressIndicator(Modifier.size(22.dp),strokeWidth=2.dp)
-                    else Icon(Icons.Default.Share,"Поделиться PDF")
+                    else Icon(painterResource(R.drawable.ic_share),"Поделиться PDF")
                 }
             })
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHighest).clip(RoundedCornerShape(0.dp))) {
@@ -257,12 +255,12 @@ private fun ReaderScreen(
             Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
                 TextButton(onClick={jump=true},modifier=Modifier.testTag("page-counter")) {
                     Text("$current / ${document.engine.pageCount}")
-                    Spacer(Modifier.width(4.dp));Icon(Icons.Default.UnfoldMore,null,Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp));Icon(painterResource(R.drawable.ic_unfold_more),null,Modifier.size(18.dp))
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    IconButton(onClick={setZoom(zoom-0.5f)},enabled=zoom>1f){Icon(Icons.Default.Remove,"Уменьшить")}
+                    IconButton(onClick={setZoom(zoom-0.5f)},enabled=zoom>1f){Icon(painterResource(R.drawable.ic_remove),"Уменьшить")}
                     TextButton(onClick={setZoom(1f)}) {Text("${(zoom*100).roundToInt()}%")}
-                    IconButton(onClick={setZoom(zoom+0.5f)},enabled=zoom<4f){Icon(Icons.Default.Add,"Увеличить")}
+                    IconButton(onClick={setZoom(zoom+0.5f)},enabled=zoom<4f){Icon(painterResource(R.drawable.ic_add),"Увеличить")}
                 }
             }
         }

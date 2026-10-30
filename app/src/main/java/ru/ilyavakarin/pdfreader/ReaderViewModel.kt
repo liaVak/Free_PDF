@@ -3,7 +3,6 @@ package ru.ilyavakarin.pdfreader
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -39,6 +38,7 @@ data class ReaderState(
 )
 class ReaderViewModel(application: Application,private val saved:SavedStateHandle):AndroidViewModel(application) {
     private val history=HistoryRepository(application)
+    private val access=DocumentAccess(application)
     val recents=history.documents.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     private val _state=MutableStateFlow(ReaderState())
     val state:StateFlow<ReaderState> = _state.asStateFlow()
@@ -61,16 +61,9 @@ class ReaderViewModel(application: Application,private val saved:SavedStateHandl
             var candidate:PdfEngine?=null
             try {
                 old?.engine?.close()
-                if(persistPermission) {
-                    // A provider may give only a temporary grant; the current read can still succeed.
-                    runCatching { getApplication<Application>().contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                }
+                if(persistPermission) access.retain(uri)
                 val app=getApplication<Application>()
-                val name=withContext(Dispatchers.IO) {
-                    app.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use {
-                        if(it.moveToFirst()) it.getString(0) else null
-                    } ?: "Документ.pdf"
-                }
+                val name=access.name(uri)
                 val before=history.documents.first()
                 val previous=before.firstOrNull { it.uri==uri.toString() }
                 candidate=AndroidPdfEngine.open(app,uri)
@@ -79,7 +72,7 @@ class ReaderViewModel(application: Application,private val saved:SavedStateHandl
                 history.opened(RecentDocument(uri.toString(),name,System.currentTimeMillis(),page,fraction))
                 val retained=history.documents.first().map {it.uri}.toSet()
                 before.filterNot { it.uri in retained }.forEach { evicted ->
-                    runCatching { app.contentResolver.releasePersistableUriPermission(Uri.parse(evicted.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                    access.release(Uri.parse(evicted.uri))
                 }
                 currentPage=page;currentFraction=fraction
                 _state.value=ReaderState(document=OpenDocument(uri,name,candidate,page,fraction,size))
@@ -121,7 +114,7 @@ class ReaderViewModel(application: Application,private val saved:SavedStateHandl
     fun remove(uri:String) { viewModelScope.launch {
         try {
             history.remove(uri)
-            runCatching { getApplication<Application>().contentResolver.releasePersistableUriPermission(Uri.parse(uri),Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            access.release(Uri.parse(uri))
         } catch(e:Exception) { if(e is CancellationException)throw e;showError("Не удалось обновить историю") }
     } }
     fun share(launch:(Intent)->Unit) {

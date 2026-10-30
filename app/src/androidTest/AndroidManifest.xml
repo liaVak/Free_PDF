@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="ru.ilyavakarin.pdfreader.ExternalPdfSenderActivity" android:exported="true" android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <provider android:name="ru.ilyavakarin.pdfreader.ExternalPdfProvider" android:authorities="ru.ilyavakarin.pdfreader.test.fixtures" android:exported="false" android:grantUriPermissions="true" />
+    </application>
+</manifest>

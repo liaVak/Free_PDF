@@ -1,5 +1,6 @@
 package ru.ilyavakarin.pdfreader
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,8 @@ class MainActivity : ComponentActivity() {
     val model: ReaderViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // ViewModel/SavedStateHandle restores the current document after recreation.
+        if (savedInstanceState == null) openIncomingDocument(intent)
         enableEdgeToEdge()
         setContent {
             val dark=isSystemInDarkTheme()
@@ -25,6 +28,22 @@ class MainActivity : ComponentActivity() {
             )) { PdfReaderApp(model) }
         }
     }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openIncomingDocument(intent)
+    }
+
+    private fun openIncomingDocument(intent: Intent) {
+        if (intent.action != Intent.ACTION_VIEW) return
+        val uri = PdfIntents.documentUri(intent)
+        if (uri == null) {
+            model.showError("Не удалось открыть файл. Выберите PDF на устройстве.")
+        } else {
+            model.open(uri, persistPermission = intent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0)
+        }
+    }
+
     override fun onStop() {
         model.persistPosition()
         super.onStop()
